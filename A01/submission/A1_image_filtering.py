@@ -1,9 +1,13 @@
+import time
 import numpy as np
 import cv2
-
+import matplotlib.pyplot as plt
 
 LENNA_PATH = "lenna.png"
 SHAPE_PATH = "shapes.png"
+
+WINDOW_NAME = "vis_window"
+
 
 def get_gaussian_filter_1d(size, sigma) :
     kernel = np.arange(size//2 * -1, size//2+1).astype(np.float32).reshape(1, -1)
@@ -95,20 +99,102 @@ def cross_correlation_2d(img, kernel) :
     """
     return cross_corr_2d_1(img, kernel)
 
-def g2ggg(img) :
-    return np.stack((img,img, img))
-
-
-def doAsProffesorSaid(img_name) :
-
-
-
-
-    list(map(
-
+def nine_gausians(
+    img_name,
+    filter_params = [
+        [2, 1],
+        [2, 5],
+        [2, 10],
+        [8, 1],
+        [8, 5],
+        [8, 10],
+        [11, 1],
+        [11, 5],
+        [11, 10]
+    ]
+) :
+    img = cv2.imread(img_name, cv2.IMREAD_GRAYSCALE)
+    imgs = list(map(
+        lambda filter_param : cross_correlation_2d(
+            img, get_gaussian_filter_2d(*filter_param)
+        ),
+        filter_params
     ))
 
 
+    cv2.imshow(WINDOW_NAME, imgs[0])
+    cv2.waitKey(-1)
+
+    imgs = list(map(
+        lambda img, filter_param : cv2.putText(
+            img,
+            "{0}x{0}, s={1}".format(*filter_param),
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (0,0,0),
+            2
+        ),
+        imgs,
+        filter_params
+    ))
+
+    """
+    result = np.vstack(
+        [
+            np.hstack([
+                imgs[i + j] for j in range(3)
+            ]) 
+        ] for i in range(0, len(imgs), 3)
+    )
+    """
+    return np.vstack([
+        np.hstack([imgs[0], imgs[1], imgs[2]]),
+        np.hstack([imgs[3], imgs[4], imgs[5]]),
+        np.hstack([imgs[6], imgs[7], imgs[8]]),
+    ])
+
+def do_e(
+    img_name,
+    filter_param = [3, 1]
+) :
+    img = cv2.imread(img_name, cv2.IMREAD_GRAYSCALE)
+
+    kernel = get_gaussian_filter_2d(*filter_param)
+    kernel_v = get_gaussian_filter_1d(*filter_param)
+    kernel_h = get_gaussian_filter_1d(*filter_param)
+
+    start_2d = time.time()
+    filtered_2d = cross_correlation_2d(img, kernel)
+    time_2d = time.time() - start_2d
+    print("time consumed for 2D kernel filtering :", time_2d)
+
+    start_1ds = time.time()
+    filtered_1ds = cross_correlation_2d(
+        cross_correlation_2d(img, kernel_v),
+        kernel_h
+    )
+    time_1ds = time.time() - start_1ds
+    print("time consumed for sequential 1D kernel filtering :", time_1ds)
+
+    diff_map = np.abs(filtered_2d - filtered_1ds)
+
+    cv2.imshow(WINDOW_NAME, diff_map)
+    key = cv2.waitKey(-1)
+
+def do_work(img_name) :
+    print("image name :",img_name)
+    print("applying 9 gaussian filteres...")
+
+
+    nine_image = nine_gausians(img_name)
+    cv2.imshow(WINDOW_NAME, nine_image)
+    key = cv2.waitKey(-1)
+    cv2.imwrite(f"./result/part_1_gaussian_filtered_{img_name}", nine_image)
+    print("applying 1d, 2d gausian filters..")
+    do_e(img_name)
+
+    print()
 
 if __name__ == "__main__" :
     print("gaussian_filter_1d(5, 1) :")
@@ -116,8 +202,10 @@ if __name__ == "__main__" :
     print("gaussian_filter_2d(5, 1) :")
     print(get_gaussian_filter_2d(5, 1))
 
-    lenna_img = cv2.imread(LENNA_PATH, cv2.IMREAD_GRAYSCALE)
-    shape_img = cv2.imread(SHAPE_PATH, cv2.IMREAD_GRAYSCALE)
+    cv2.namedWindow(WINDOW_NAME, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(WINDOW_NAME, 512 * 3, 512 * 3)
 
+    img_names = [LENNA_PATH, SHAPE_PATH]
 
-    img_name = f"./result/part_1_gaussian_filtered_{}"
+    for img_name in img_names :
+        do_work(img_name)
