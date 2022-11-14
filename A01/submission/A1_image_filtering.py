@@ -1,7 +1,6 @@
 import time
 import numpy as np
 import cv2
-import matplotlib.pyplot as plt
 
 LENNA_PATH = "lenna.png"
 SHAPE_PATH = "shapes.png"
@@ -121,10 +120,6 @@ def nine_gausians(
         filter_params
     ))
 
-
-    cv2.imshow(WINDOW_NAME, imgs[0])
-    cv2.waitKey(-1)
-
     imgs = list(map(
         lambda img, filter_param : cv2.putText(
             img,
@@ -187,7 +182,7 @@ def do_work(img_name) :
     print("applying 9 gaussian filteres...")
 
 
-    nine_image = nine_gausians(img_name)
+    nine_image = nine_gausians(img_name).astype(np.uint8)
     cv2.imshow(WINDOW_NAME, nine_image)
     key = cv2.waitKey(-1)
     cv2.imwrite(f"./result/part_1_gaussian_filtered_{img_name}", nine_image)
